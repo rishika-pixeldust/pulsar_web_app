@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pulsar CRM
 
-## Getting Started
+A complete CRM portal built on the [Lightfield API](https://docs.lightfield.app/) — an agent-native CRM platform. The portal gives you a fast, modern UI over your Lightfield workspace: accounts, contacts, opportunities, tasks, notes, meetings, emails, and lists.
 
-First, run the development server:
+## Stack
+
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 16 (App Router, React Server Components, Turbopack) |
+| Language | TypeScript |
+| UI | Tailwind CSS v4 + shadcn/ui (Radix) + lucide-react |
+| Data fetching | TanStack React Query |
+| Validation | Zod |
+| CRM backend | Lightfield API via the official `lightfield` TypeScript SDK (server-side only) |
+| Auth | Auth.js (NextAuth v5) credentials provider, JWT sessions |
+| User store | SQLite via better-sqlite3 (`data/app.db`, created automatically) |
+
+## Features
+
+- **Authentication** — register/login with email + password (bcrypt-hashed, stored locally in SQLite). All portal pages and API routes are protected.
+- **Dashboard** — record counts, open pipeline value, pipeline-by-stage breakdown, upcoming tasks, recent notes.
+- **Accounts & Contacts** — searchable, paginated tables; detail pages with all fields and linked records; create/edit dialogs.
+- **Opportunities** — kanban pipeline board grouped by stage (move deals between stages) plus a table view; create/edit.
+- **Tasks & Notes** — list, detail, create/edit (markdown notes supported).
+- **Meetings & Emails** — read-only activity views.
+- **Lists** — curated record lists with member tables.
+- **Schema-driven forms** — create/edit forms are generated from Lightfield field definitions, so custom fields work automatically.
+- **Mock mode** — without an API key the portal serves realistic sample data so you can explore everything locally.
+
+## Getting started
+
+### 1. Requirements
+
+- Node.js 20+ (22 LTS recommended)
+
+### 2. Install
+
+```bash
+npm install
+```
+
+### 3. Configure environment
+
+Copy the template and fill in values:
+
+```bash
+cp .env.example .env.local
+```
+
+- `AUTH_SECRET` — generate with `openssl rand -base64 32`
+- `LIGHTFIELD_API_KEY` — create in Lightfield settings (admin only). Select read scopes for all objects plus create/update scopes for accounts, contacts, opportunities, tasks, notes, and lists. **Leave empty to run in mock mode with sample data.**
+
+The API key is only ever used server-side (route handlers / server components); it is never shipped to the browser.
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000, create an account on the register page, and sign in.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── (auth)/            # /login, /register
+│   ├── (portal)/          # protected CRM pages (dashboard, accounts, …)
+│   └── api/
+│       ├── auth/          # Auth.js handlers + /api/auth/register
+│       └── crm/           # generic proxy routes to the Lightfield API
+├── components/
+│   ├── crm/               # generic table/detail/form components (schema-driven)
+│   ├── layout/            # sidebar + header
+│   └── ui/                # shadcn/ui primitives
+├── hooks/use-crm.ts       # React Query hooks for the CRM API
+├── lib/
+│   ├── lightfield/        # data layer: SDK source + mock source + types
+│   ├── db.ts              # SQLite user store
+│   └── format.ts          # field-value formatting helpers
+├── auth.ts / auth.config.ts
+└── proxy.ts               # route protection (Next.js 16 proxy)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key design decisions:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Generic data layer** — every object type goes through one `CrmDataSource` interface with `list / retrieve / create / update / definitions`. The real implementation wraps the Lightfield SDK; a mock implementation provides sample data when no key is set.
+- **Definitions-driven UI** — tables and forms read Lightfield `/definitions` schemas at runtime, so system and custom fields render with the right input types (select options, currency, dates, markdown, …) without code changes.
+- **Server-side API key** — the browser only talks to `/api/crm/*` routes, which validate the session, validate input with Zod, and forward to Lightfield.
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The Lightfield API is in beta; list endpoints cap pages at 25 records (the UI paginates accordingly).
+- Emails are fetched via the raw HTTP client because the current SDK version does not yet expose an email resource.
