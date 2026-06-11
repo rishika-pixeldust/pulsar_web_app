@@ -2,6 +2,8 @@
 
 A complete CRM portal built on the [Lightfield API](https://docs.lightfield.app/) — an agent-native CRM platform. The portal gives you a fast, modern UI over your Lightfield workspace: accounts, contacts, opportunities, tasks, notes, meetings, emails, and lists.
 
+**Live:** https://pulsar-web-app-chi.vercel.app · **Full project document (sales / dev / demo):** [`PROJECT_OVERVIEW.md`](./PROJECT_OVERVIEW.md)
+
 ## Stack
 
 | Layer | Technology |
@@ -13,11 +15,11 @@ A complete CRM portal built on the [Lightfield API](https://docs.lightfield.app/
 | Validation | Zod |
 | CRM backend | Lightfield API via the official `lightfield` TypeScript SDK (server-side only) |
 | Auth | Auth.js (NextAuth v5) credentials provider, JWT sessions |
-| User store | SQLite via better-sqlite3 (`data/app.db`, created automatically) |
+| User store | Turso (libSQL / SQLite-compatible cloud DB) via `@libsql/client`; falls back to a local `data/app.db` file when `TURSO_*` env vars are unset |
 
 ## Features
 
-- **Authentication** — register/login with email + password (bcrypt-hashed, stored locally in SQLite). All portal pages and API routes are protected.
+- **Authentication** — register/login with email + password (bcrypt-hashed, stored in the Turso/libSQL user database). All portal pages and API routes are protected.
 - **Dashboard** — record counts, open pipeline value, pipeline-by-stage breakdown, upcoming tasks, recent notes.
 - **Accounts & Contacts** — searchable, paginated tables; detail pages with all fields and linked records; create/edit dialogs.
 - **Opportunities** — kanban pipeline board grouped by stage (move deals between stages) plus a table view; create/edit.
